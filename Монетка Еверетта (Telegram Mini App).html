@@ -1,0 +1,1756 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>Everett's Coin / Монетка Еверетта</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700&display=swap">
+  <style>
+    :root {
+      --bg: #0d1022;
+      --panel: #171b3a;
+      --panel2: #1f2549;
+      --line: #2d3363;
+      --ink: #ecebf8;
+      --muted: #a0a3c8;
+      --gold: #f3bb4d;
+      --gold-ink: #2e1d05;
+      --teal: #4fd6c8;
+      --teal-ink: #062a27;
+      --warn: #ff8a98;
+      --font-d: 'Unbounded', system-ui, sans-serif;
+      --font-b: 'Manrope', system-ui, -apple-system, sans-serif;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(120% 52% at 50% -10%, #252c68 0%, rgba(37, 44, 104, 0) 64%),
+        var(--bg);
+      color: var(--ink);
+      font: 15px/1.5 var(--font-b);
+      padding-left: max(14px, env(safe-area-inset-left, 0px));
+      padding-right: max(14px, env(safe-area-inset-right, 0px));
+      overflow-x: hidden;
+    }
+
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    :focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+    h1, h2, h3, h4, p { margin: 0; }
+    h1, h2, h3 { font-weight: 700; text-wrap: balance; }
+    [hidden] { display: none !important; }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: calc(12px + env(safe-area-inset-top, 0px)) 0 calc(94px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Header */
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font: 700 13.5px/1.2 var(--font-d);
+      letter-spacing: 0.01em;
+    }
+    .brand i {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: radial-gradient(circle at 35% 30%, #ffe7a3, var(--gold) 55%, #a8701f);
+      box-shadow: 0 0 0 2px #8a5a18 inset, 0 0 12px rgba(243, 187, 77, 0.35);
+    }
+    .top-ctrls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ctrl-pill {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .ctrl-pill.active {
+      color: var(--gold);
+      border-color: rgba(243, 187, 77, 0.45);
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .pill span { color: var(--muted); font-weight: 500; }
+    .pill.low b { color: var(--warn); }
+    .mc {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #ffe7a3, var(--gold) 60%, #a8701f);
+    }
+
+    /* Mode & Context Filter Chips */
+    .modes {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      padding: 14px 2px 6px;
+      scrollbar-width: none;
+    }
+    .modes::-webkit-scrollbar { display: none; }
+    .chip {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-weight: 700;
+      font-size: 12.5px;
+      white-space: nowrap;
+      transition: background 0.18s, color 0.18s, border-color 0.18s;
+    }
+    .chip[aria-pressed="true"] {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--gold-ink);
+    }
+
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .fchip {
+      border: 1px solid var(--line);
+      background: rgba(23, 27, 58, 0.7);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+    .fchip[aria-pressed="true"] {
+      background: rgba(79, 214, 200, 0.18);
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+    .modesub {
+      margin: 6px 0 0;
+      font-size: 12.5px;
+      color: var(--muted);
+      min-height: 18px;
+    }
+
+    /* Custom Sides Panel */
+    .mine {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      border-radius: 16px;
+      padding: 13px;
+      display: grid;
+      gap: 8px;
+    }
+    .mine label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .mine input {
+      width: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 15px;
+    }
+    .mine input::placeholder { color: #6c719d; }
+    .saved {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 11px;
+      padding: 6px 8px 6px 11px;
+      font-size: 13px;
+    }
+    .saved span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .saved button {
+      border: 1px solid var(--line);
+      background: transparent;
+      border-radius: 8px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* 3D Coin Stage */
+    .stage {
+      position: relative;
+      height: 250px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 2px 0;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .stage-glow {
+      position: absolute;
+      width: 190px;
+      height: 190px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(243, 187, 77, 0.22) 0%, rgba(79, 214, 200, 0.08) 50%, rgba(0, 0, 0, 0) 72%);
+      pointer-events: none;
+      transition: transform 0.35s, opacity 0.35s;
+    }
+    .stage.edge-glow .stage-glow {
+      transform: scale(1.35);
+      background: radial-gradient(circle, rgba(243, 187, 77, 0.65) 0%, rgba(79, 214, 200, 0.35) 50%, rgba(0, 0, 0, 0) 74%);
+    }
+    #coin3d {
+      width: 100%;
+      height: 100%;
+      display: block;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Verdict & Idea Cards */
+    .verdict {
+      margin: 0 0 12px;
+      min-height: 48px;
+      text-align: center;
+      font: 700 15.5px/1.35 var(--font-d);
+      text-wrap: balance;
+    }
+    .verdict small {
+      display: block;
+      margin-top: 4px;
+      font: 500 12.5px/1.4 var(--font-b);
+      color: var(--muted);
+    }
+
+    .ideas { display: grid; gap: 9px; }
+    .idea {
+      position: relative;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 12px 14px 12px 54px;
+      transition: opacity 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    .tag {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font: 700 11px var(--font-d);
+    }
+    #i1 .tag { background: var(--gold); color: var(--gold-ink); }
+    #i2 .tag { background: var(--teal); color: var(--teal-ink); }
+    .idea h3 { font-size: 14.5px; line-height: 1.3; }
+    .idea p { margin-top: 3px; font-size: 13px; color: var(--muted); }
+    #i1.win { border-color: var(--gold); box-shadow: 0 10px 28px -14px rgba(243, 187, 77, 0.78); }
+    #i2.win { border-color: var(--teal); box-shadow: 0 10px 28px -14px rgba(79, 214, 200, 0.78); }
+    .idea.lose { opacity: 0.48; }
+    .idea.want { opacity: 1; border-style: dashed; border-color: var(--ink); }
+
+    /* Buttons */
+    .btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 700;
+      font-size: 14px;
+      text-align: center;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.42; cursor: default; }
+    .btn.primary {
+      background: var(--gold);
+      color: var(--gold-ink);
+      width: 100%;
+      box-shadow: 0 10px 26px -12px rgba(243, 187, 77, 0.9);
+    }
+    .btn.teal {
+      background: var(--teal);
+      color: var(--teal-ink);
+      width: 100%;
+    }
+    .btn.ghost {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .actions { display: grid; gap: 8px; margin-top: 12px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* Post-Flip Reflection & Share */
+    .after {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      border-radius: 16px;
+      padding: 13px;
+      display: grid;
+      gap: 10px;
+    }
+    .after h4 {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .three .btn { padding: 9px 6px; font-size: 12px; }
+    .note { font-size: 13.5px; }
+    .note.twin { color: var(--teal); }
+    .note.esc {
+      color: var(--muted);
+      font-size: 12.5px;
+      padding-top: 6px;
+      border-top: 1px solid var(--line);
+    }
+
+    /* Sections */
+    .sec-h {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 20px 0 10px;
+    }
+    .sec-h h2 { font: 700 17px var(--font-d); }
+    .sec-h span { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .list { display: grid; gap: 8px; }
+
+    /* Achievements */
+    .ach {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      gap: 11px;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 14px;
+      padding: 11px 12px;
+    }
+    .ach .ic {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .ach.on .ic { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); }
+    .ach h3 { font-size: 14px; }
+    .ach p { font-size: 12px; color: var(--muted); }
+    .ach .rw { font-size: 12px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+    .ach:not(.on) .rw { color: var(--muted); }
+    .bar { height: 4px; border-radius: 4px; background: var(--line); margin-top: 6px; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: var(--teal); border-radius: 4px; }
+
+    /* Lore */
+    .carousel {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+    }
+    .carousel::-webkit-scrollbar { display: none; }
+    .lcard {
+      flex: 0 0 100%;
+      min-width: 0;
+      scroll-snap-align: center;
+      min-height: 315px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: linear-gradient(160deg, var(--panel2), var(--panel));
+    }
+    .lcard .k {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--teal);
+      font-weight: 700;
+    }
+    .lcard h2 { font: 700 19px/1.25 var(--font-d); }
+    .lcard p { font-size: 15px; line-height: 1.6; }
+    .lcard ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 13.5px; }
+    .lcard a { color: var(--gold); }
+    .dots {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      gap: 10px;
+    }
+    .dots div { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+    .dots i.on { background: var(--gold); }
+
+    /* Shop */
+    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .item {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      text-align: center;
+      align-content: start;
+    }
+    .item h3 { font-size: 13.5px; }
+    .item p { font-size: 11.5px; color: var(--muted); }
+    .mini {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 34% 28%, var(--hi), var(--mid) 55%, var(--lo));
+      box-shadow: inset 0 0 0 4px var(--rim), inset 0 0 0 6px var(--lo);
+    }
+    .item .btn { width: 100%; padding: 8px; font-size: 12px; }
+    .item .btn.on { background: var(--teal); color: var(--teal-ink); }
+    .item .btn.buy { background: var(--gold); color: var(--gold-ink); }
+
+    .set-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 14px;
+      padding: 11px 12px;
+      font-size: 13.5px;
+    }
+    .set-row small { display: block; color: var(--muted); font-size: 11.5px; }
+    .sw {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      border-radius: 999px;
+      padding: 6px 13px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .sw[aria-pressed="true"] { background: var(--teal); color: var(--teal-ink); border-color: var(--teal); }
+
+    /* Bottom Navigation */
+    .tabs {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      background: rgba(13, 16, 34, 0.94);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--line);
+      padding: 6px max(10px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
+      z-index: 30;
+    }
+    .tabs div {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .tab {
+      background: none;
+      border: 0;
+      display: grid;
+      justify-items: center;
+      gap: 2px;
+      padding: 6px 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      border-radius: 12px;
+    }
+    .tab svg { width: 21px; height: 21px; }
+    .tab[aria-selected="true"] { color: var(--gold); }
+
+    /* Stories Modal */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 10, 22, 0.88);
+      backdrop-filter: blur(10px);
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .modal {
+      width: 100%;
+      max-width: 400px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-head h3 { font: 700 15.5px var(--font-d); }
+    .close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      font-size: 18px;
+      line-height: 1;
+      display: grid;
+      place-items: center;
+    }
+    .story-preview {
+      width: 100%;
+      max-height: 54vh;
+      object-fit: contain;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #080a16;
+    }
+
+    /* Toasts */
+    .toasts {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      pointer-events: none;
+      z-index: 60;
+      padding-inline: 16px;
+    }
+    .toast {
+      background: var(--panel2);
+      border: 1px solid var(--gold);
+      border-radius: 13px;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      max-width: 420px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+      animation: tin 0.22s ease-out;
+    }
+    .toast.s { border-color: var(--line); }
+    @keyframes tin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><i></i><span id="brandTitle">Монетка Еверетта</span></div>
+    <div class="top-ctrls">
+      <button class="ctrl-pill active" data-act="lang" id="langBtn">UA / EN</button>
+      <button class="ctrl-pill" data-act="mute" id="sndBtn">🔊</button>
+    </div>
+  </header>
+
+  <div class="stats" aria-label="Stats">
+    <div class="pill"><i class="mc"></i><b id="sCoins">0</b><span data-i18n="coins">монет</span></div>
+    <div class="pill"><b id="sStreak">0</b><span data-i18n="days">днів</span></div>
+    <div class="pill"><b id="sWorlds">0</b><span data-i18n="branches">гілок</span></div>
+    <div class="pill" id="pRew"><span data-i18n="rewards">Нагороди:</span><b id="sRew">10/10</b></div>
+  </div>
+
+  <main>
+    <!-- TAB 1: FLIP -->
+    <section id="tab-flip">
+      <div class="modes" id="modes" role="group"></div>
+      <div class="filters" id="filters" role="group"></div>
+      <p class="modesub" id="modeSub"></p>
+
+      <div class="mine" id="minePanel" hidden>
+        <label for="m1" data-i18n="side1">Грань I</label>
+        <input id="m1" maxlength="60" autocomplete="off">
+        <label for="m2" data-i18n="side2">Грань II</label>
+        <input id="m2" maxlength="60" autocomplete="off">
+        <div class="row2">
+          <button class="btn ghost" data-act="msave" data-i18n="savePair">Зберегти пару</button>
+          <button class="btn ghost" data-act="mclear" data-i18n="clear">Очистити</button>
+        </div>
+        <p style="font-size:12px;color:var(--muted)" data-i18n="mineNote">Зберігається лише локально. Без нагород, без ліміту.</p>
+        <div class="list" id="mineList"></div>
+      </div>
+
+      <div class="stage" id="stage" data-act="flip" role="button" tabindex="0" aria-label="Flip Coin">
+        <div class="stage-glow"></div>
+        <canvas id="coin3d"></canvas>
+      </div>
+
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+
+      <div class="ideas">
+        <article class="idea" id="i1"><span class="tag">I</span><h3 id="t1"></h3><p id="d1"></p></article>
+        <article class="idea" id="i2"><span class="tag">II</span><h3 id="t2"></h3><p id="d2"></p></article>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="flipBtn" data-act="flip"></button>
+        <div class="row2" id="pairActions">
+          <button class="btn ghost" data-act="newpair" id="newBtn" data-i18n="newPair">Нова пара</button>
+          <button class="btn ghost" data-act="both" id="bothBtn" data-i18n="bothGood">Обидві класні</button>
+        </div>
+      </div>
+
+      <div class="after" id="after" hidden>
+        <h4 data-i18n="howFeel">Що ти відчуваєш?</h4>
+        <div class="three">
+          <button class="btn ghost" data-act="glad" id="gladBtn" data-i18n="glad">Радий</button>
+          <button class="btn ghost" data-act="other" id="otherBtn" data-i18n="wantedOther">Хотів іншого</button>
+          <button class="btn ghost" data-act="branch" id="branchBtn" data-i18n="otherBranch">Інша гілка</button>
+        </div>
+        <p class="note" id="reactMsg" hidden></p>
+        <p class="note twin" id="twinMsg" hidden></p>
+        <div class="row2">
+          <button class="btn teal" data-act="share-tg" data-i18n="shareTg">У Telegram</button>
+          <button class="btn ghost" data-act="share-story" data-i18n="shareStory">Stories (9:16)</button>
+        </div>
+        <p class="note esc" id="escMsg" hidden></p>
+      </div>
+    </section>
+
+    <!-- TAB 2: ACHIEVEMENTS -->
+    <section id="tab-ach" hidden>
+      <div class="sec-h"><h2 data-i18n="tabAch">Ачівки</h2><span id="achCount"></span></div>
+      <div class="list" id="achList"></div>
+    </section>
+
+    <!-- TAB 3: LORE -->
+    <section id="tab-lore" hidden>
+      <div class="sec-h"><h2 data-i18n="tabLore">Лор</h2><span id="loreSub"></span></div>
+      <div class="carousel" id="carousel"></div>
+      <div class="dots">
+        <div id="dots"></div>
+        <button class="btn ghost" data-act="lnext" id="lnext"></button>
+      </div>
+    </section>
+
+    <!-- TAB 4: SHOP -->
+    <section id="tab-shop" hidden>
+      <div class="sec-h"><h2 data-i18n="skinsTitle">Скіни 3D-монетки</h2><span id="skinCount"></span></div>
+      <div class="grid2" id="skins"></div>
+
+      <div class="sec-h"><h2 data-i18n="testingTitle">Для тестування</h2></div>
+      <div class="list">
+        <div class="set-row">
+          <div><span data-i18n="edgeTestTitle">Шанс ребра 1 з 10</span><small data-i18n="edgeTestSub">Зазвичай строго 1 з 1000</small></div>
+          <button class="sw" data-act="edgetest" id="edgeBtn" aria-pressed="false"></button>
+        </div>
+        <div class="set-row">
+          <div><span data-i18n="resetTitle">Скинути прогрес</span><small data-i18n="resetSub">Монети, ачівки, серія, скіни</small></div>
+          <button class="sw" data-act="reset" id="resetBtn" data-i18n="reset">Скинути</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Bottom Navigation -->
+<nav class="tabs" aria-label="Navigation">
+  <div role="tablist">
+    <button class="tab" role="tab" data-act="tab" data-tab="flip" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 17v-5M12 12l-3.5-3.5M12 12l3.5-3.5"/></svg>
+      <span data-i18n="tabFlip">Кидок</span>
+    </button>
+    <button class="tab" role="tab" data-act="tab" data-tab="ach" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8 20h8"/></svg>
+      <span data-i18n="tabAch">Ачівки</span>
+    </button>
+    <button class="tab" role="tab" data-act="tab" data-tab="lore" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5V21.5"/></svg>
+      <span data-i18n="tabLore">Лор</span>
+    </button>
+    <button class="tab" role="tab" data-act="tab" data-tab="shop" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+      <span data-i18n="tabShop">Магазин</span>
+    </button>
+  </div>
+</nav>
+
+<!-- Stories Preview Modal -->
+<div class="overlay" id="storyModal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h3 data-i18n="storyModalTitle">Картка для Stories</h3>
+      <button class="close-btn" data-act="close-modal">×</button>
+    </div>
+    <canvas id="storyCanvas" width="1080" height="1920" class="story-preview"></canvas>
+    <div class="row2">
+      <button class="btn primary" data-act="story-dl" data-i18n="downloadPng">Завантажити PNG</button>
+      <button class="btn ghost" data-act="story-copy" data-i18n="copyText">Копіювати текст</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- TELEGRAM WEBAPP SDK ---------- */
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  try {
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor('#0d1022');
+      tg.setBackgroundColor('#0d1022');
+    }
+  } catch (e) {}
+
+  function haptic(type, val) {
+    try {
+      if (tg && tg.HapticFeedback) {
+        if (type === 'impact') tg.HapticFeedback.impactOccurred(val || 'light');
+        else if (type === 'notif') tg.HapticFeedback.notificationOccurred(val || 'success');
+      } else if (navigator.vibrate) {
+        navigator.vibrate(val === 'heavy' ? 40 : 18);
+      }
+    } catch (e) {}
+  }
+
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+  /* ---------- I18N DICTIONARY ---------- */
+  const I18N = {
+    uk: {
+      brand: 'Монетка Еверетта',
+      coins: 'монет', days: 'днів', branches: 'гілок', rewards: 'Нагороди:',
+      tabFlip: 'Кидок', tabAch: 'Ачівки', tabLore: 'Лор', tabShop: 'Магазин',
+      side1: 'Грань I', side2: 'Грань II',
+      ph1: 'Наприклад: піца', ph2: 'Наприклад: суші',
+      savePair: 'Зберегти пару', clear: 'Очистити',
+      mineNote: 'Зберігається лише локально. Без нагород, зате без ліміту.',
+      tapCoin: 'Торкнись 3D-монетки',
+      flipBtn: 'Підкинути монетку', flipAgain: 'Підкинути ще раз',
+      enterTwo: 'Впиши два різні варіанти',
+      newPair: 'Нова пара', bothGood: 'Обидві класні',
+      howFeel: 'Що ти відчуваєш?',
+      glad: 'Радий', wantedOther: 'Хотів іншого', otherBranch: 'Інша гілка',
+      shareTg: 'У Telegram', shareStory: 'Stories (9:16)',
+      skinsTitle: 'Скіни 3D-монетки', testingTitle: 'Для тестування',
+      edgeTestTitle: 'Шанс ребра 1 з 10', edgeTestSub: 'Зазвичай строго 1 з 1000',
+      resetTitle: 'Скинути прогрес', resetSub: 'Монети, ачівки, серія, скіни',
+      reset: 'Скинути', confirmReset: 'Точно скинути?',
+      on: 'Увімкнено', off: 'Вимкнено',
+      equipped: 'Вдягнено', equip: 'Вдягнути',
+      next: 'Далі', restart: 'Спочатку', loreSub: '7 карток про багатосвітову теорію',
+      storyModalTitle: 'Картка для Stories', downloadPng: 'Завантажити PNG', copyText: 'Копіювати текст',
+      fAll: 'Усі', fHome: 'Вдома', fOut: 'Надворі',
+      chose: 'Доля обрала:', sideLabel: 'Грань',
+      edgeTitle: 'Ребро! Шанс 1 з 1000',
+      edgeSub: 'У цьому всесвіті можна обидва варіанти.',
+      reFlipNote: 'Повторний кидок цієї пари · без монет',
+      capNote: 'Денний ліміт нагород (10/10) вичерпано · кидати можна далі',
+      gladMsg: 'Тоді просто йдіть і робіть. Монетка влучила.',
+      gladEdge: 'Тоді насолоджуйтесь обома варіантами!',
+      otherMsg: t => `Це теж відповідь. Твоя справжня грань: «${t}».`,
+      bothToast: 'Складний вибір! Тепер слово за монеткою.',
+      copied: 'Текст скопійовано!', savedPng: 'Картку збережено як PNG!',
+      needCoins: n => `Потрібно ${n} монет`,
+      storyHead: 'У ЦЬОМУ ВСЕСВІТІ:', storyOther: 'У СУСІДНІЙ ГІЛЦІ ДВІЙНИК ОБРАВ:',
+      storyEdge: 'РЕБРО! ОБИДВА ВАРІАНТИ',
+      shareText: (w, l) => `У цьому всесвіті ми обрали: «${w}». Тим часом у сусідній гілці: «${l}». Підкинь свою монетку!`,
+      escPrefix: 'Фраза для втечі:',
+      hiddenAch: 'Прихована ачівка', hiddenDesc: 'Умову дізнаєшся, коли виконаєш.'
+    },
+    en: {
+      brand: "Everett's Coin",
+      coins: 'coins', days: 'days', branches: 'branches', rewards: 'Rewards:',
+      tabFlip: 'Flip', tabAch: 'Badges', tabLore: 'Lore', tabShop: 'Shop',
+      side1: 'Side I', side2: 'Side II',
+      ph1: 'e.g. Pizza', ph2: 'e.g. Sushi',
+      savePair: 'Save pair', clear: 'Clear',
+      mineNote: 'Stored locally only. No coin rewards, unlimited flips.',
+      tapCoin: 'Tap the 3D coin',
+      flipBtn: 'Flip the Coin', flipAgain: 'Flip Again',
+      enterTwo: 'Enter two different options',
+      newPair: 'New Pair', bothGood: 'Both are great',
+      howFeel: 'How do you feel?',
+      glad: 'Glad', wantedOther: 'Wanted the other', otherBranch: 'Other branch',
+      shareTg: 'Share in Telegram', shareStory: 'Stories (9:16)',
+      skinsTitle: '3D Coin Skins', testingTitle: 'Testing',
+      edgeTestTitle: 'Edge chance 1 in 10', edgeTestSub: 'Normally strictly 1 in 1000',
+      resetTitle: 'Reset progress', resetSub: 'Coins, badges, streak, skins',
+      reset: 'Reset', confirmReset: 'Confirm reset?',
+      on: 'Enabled', off: 'Disabled',
+      equipped: 'Equipped', equip: 'Equip',
+      next: 'Next', restart: 'Start over', loreSub: '7 cards on Many-Worlds',
+      storyModalTitle: 'Stories Card', downloadPng: 'Download PNG', copyText: 'Copy Text',
+      fAll: 'All', fHome: 'Home', fOut: 'Outside',
+      chose: 'Fate chose:', sideLabel: 'Side',
+      edgeTitle: 'Edge! 1 in 1000 chance',
+      edgeSub: 'In this universe, you get to do both.',
+      reFlipNote: 'Re-flipping same pair · no coins',
+      capNote: 'Daily reward cap (10/10) reached · free flips continue',
+      gladMsg: 'Then go for it. The coin nailed it.',
+      gladEdge: 'Enjoy both worlds at once!',
+      otherMsg: t => `That is an answer too. Your true choice is "${t}".`,
+      bothToast: 'Tough choice! Let the coin decide.',
+      copied: 'Text copied!', savedPng: 'Card saved as PNG!',
+      needCoins: n => `Need ${n} coins`,
+      storyHead: 'IN THIS UNIVERSE:', storyOther: 'MEANWHILE IN ANOTHER BRANCH:',
+      storyEdge: 'EDGE LANDING! BOTH OPTIONS',
+      shareText: (w, l) => `In this universe we got: "${w}". Meanwhile in another branch: "${l}". Flip your own coin!`,
+      escPrefix: 'Polite exit line:',
+      hiddenAch: 'Hidden Badge', hiddenDesc: 'Secret condition.'
+    }
+  };
+
+  const MODES = [
+    { id: 'group', uk: 'Компанія', en: 'Group', subUk: 'Від трьох людей. Спільний вибір без суперечок.', subEn: '3+ people. Group decisions without endless debates.' },
+    { id: 'solo', uk: 'Соло', en: 'Solo', subUk: 'Ти й вечір. Тихо чи активно — вирішує випадок.', subEn: 'Just you and tonight. Chill or active — fate decides.' },
+    { id: 'love', uk: 'Закохані', en: 'Love', subUk: 'Для пари. Затишок і маленькі сюрпризи.', subEn: 'For couples. Cozy nights and spontaneous sparks.' },
+    { id: 'date', uk: 'Побачення', en: 'Date', subUk: 'Перші зустрічі. Легко, людно, без тиску.', subEn: 'First dates. Casual, public, zero pressure.' },
+    { id: 'family', uk: 'Сім’я', en: 'Family', subUk: 'Час разом, який запам’ятається всім.', subEn: 'Quality time everyone will remember.' },
+    { id: 'mine', uk: 'Свої грані', en: 'My Sides', subUk: 'Впиши власні два варіанти. Локально.', subEn: 'Write your own two options. Saved locally.' },
+    { id: 'daily', uk: 'Всесвіт дня', en: 'Daily', subUk: 'Одна пара на день для всіх. Бонус +20 монет.', subEn: 'One shared pair for everyone today. +20 coins.' }
+  ];
+  const BASE_MODES = ['group', 'solo', 'love', 'date', 'family'];
+
+  /* Curated, brand-clean bilingual ideas tagged by context ('home' | 'out') */
+  const IDEAS = {
+    group: [
+      { ctx: 'home', uk: [['Турнір із настолок', 'Переможець обирає, де вечеряти.'], ['Кулінарний батл', 'Кожен готує страву з однакового набору продуктів.']], en: [['Board Game Tournament', 'Winner picks the next dinner spot.'], ['Cooking Battle', 'Everyone cooks using the exact same ingredients.']] },
+      { ctx: 'home', uk: [['Караоке вдома', 'Заборонено співати пісні, які знаєш напам’ять.'], ['Кіномарафон за жеребом', 'Кожен пропонує фільм, монетка визначає чергу.']], en: [['Home Karaoke', 'No singing songs you already know by heart.'], ['Movie Lottery', 'Everyone pitches a film; the coin sets the order.']] },
+      { ctx: 'home', uk: [['Мафія й чай', 'Мінімум реквізиту, максимум підозр.'], ['Вечір шарад', 'Теми виключно з вашого спільного життя.']], en: [['Mafia & Tea', 'Minimal props, maximum suspicion.'], ['Inside-Joke Charades', 'Prompts only from your shared memories.']] },
+      { ctx: 'out', uk: [['Боулінг або більярд', 'Команда, що програла, купує всім морозиво.'], ['Міський фотоквест', 'Знайти фото-докази трьох точок за годину.']], en: [['Bowling or Pool', 'Losing team buys everyone ice cream.'], ['City Photo Quest', 'Find 3 landmark photo proofs in one hour.']] },
+      { ctx: 'out', uk: [['Пікнік із сюрпризом', 'Кожен бере страву, якої ніхто не очікує.'], ['Екскурсія своїм містом', 'Один веде, решта слухає як туристи.']], en: [['Surprise Picnic', 'Everyone brings one unexpected snack.'], ['Hometown Tour', 'One person guides; everyone else plays tourist.']] },
+      { ctx: 'out', uk: [['Велопрогулянка', 'Маршрут до нового кафе і назад до сутінків.'], ['Турнір у дворі', 'Бадмінтон або фрісбі, команди ділить монетка.']], en: [['Bike Ride', 'Ride to a new café and back before dusk.'], ['Park Mini-Olympics', 'Badminton or frisbee; coin splits the teams.']] }
+    ],
+    solo: [
+      { ctx: 'home', uk: [['Кіно при гірлянді', 'Вимкни верхнє світло й увімкни відкладений фільм.'], ['Вечеря з 3 інгредієнтів', 'Відкрий холодильник і вигадай страву з трьох продуктів.']], en: [['Fairy-Light Cinema', 'Turn off overhead lights and watch a saved film.'], ['3-Ingredient Dinner', 'Open the fridge and invent a dish from 3 items.']] },
+      { ctx: 'home', uk: [['Вечір без телефона', 'Три години офлайн: ванна, книжка, чай.'], ['Механічна головоломка', 'Година практики нового трюку з картами чи пазлом.']], en: [['Phone-Free Evening', 'Three hours offline: bath, book, tea.'], ['Puzzle Hour', 'Spend an hour learning a card trick or puzzle.']] },
+      { ctx: 'home', uk: [['Лист собі на рік уперед', 'Напиши про свій день і постав нагадування.'], ['Перестановка в кімнаті', '20 хвилин на новий простір. Оцінка завтра вранці.']], en: [['Letter to Future Self', 'Write about today and set a 1-year reminder.'], ['20-Min Room Refresh', 'Rearrange one corner and judge it tomorrow.']] },
+      { ctx: 'out', uk: [['Нічна прогулянка без маршруту', 'На кожному перехресті повертай за монеткою.'], ['Кав’ярня, де ще не був', 'Замов те саме, що візьме людина перед тобою.']], en: [['Random-Turn Walk', 'Flip the coin at every intersection.'], ['Unvisited Coffee Shop', 'Order whatever the person ahead of you gets.']] },
+      { ctx: 'out', uk: [['Книгарня до закриття', 'Купи книжку виключно за обкладинкою.'], ['Мінізйомка міста', '30 кадрів на одну тему: двері, тіні чи вивіски.']], en: [['Bookstore Browse', 'Pick a book purely by its cover.'], ['City Photo Walk', 'Shoot 30 photos of one theme: doors or shadows.']] },
+      { ctx: 'out', uk: [['Прогулянка до води', 'Річка, ставок чи фонтан. Постій 10 хвилин у тиші.'], ['Візит до музею', 'Обери одну залу й роздивись лише 5 експонатів.']], en: [['Walk to Water', 'River, pond, or fountain. Stand quietly for 10 mins.'], ['Micro Museum Visit', 'Pick one gallery and study just 5 pieces.']] }
+    ],
+    love: [
+      { ctx: 'home', uk: [['Вечеря при свічках', 'Телефони в іншій кімнаті, спільна улюблена страва.'], ['Кіно під ковдрою', 'Попкорн і фільм на вибір того, хто програв у жереб.']], en: [['Candlelight Kitchen Dinner', 'Phones in another room, favorite homemade meal.'], ['Blanket Fort Cinema', 'Popcorn and a movie picked by coin toss.']] },
+      { ctx: 'home', uk: [['Десерт із нуля', 'Той, хто не вміє, керує. Той, хто вміє, виконує.'], ['Листи вдячності', 'Напишіть по сторінці одне одному й прочитайте вголос.']], en: [['Scratch Dessert', 'The less experienced cook directs; the other bakes.'], ['Gratitude Letters', 'Write one page to each other and read aloud.']] },
+      { ctx: 'home', uk: [['Масаж по черзі', '15 хвилин кожному, без розмов і гаджетів.'], ['Танець у вітальні', 'Одна улюблена пісня, жодних правил.']], en: [['Turn-Based Massage', '15 minutes each, no phones or talking.'], ['Living Room Slow Dance', 'One favorite track, zero choreography.']] },
+      { ctx: 'out', uk: [['Ресторан навмання', 'Оберіть напрямок і зайдіть у перше затишне місце.'], ['Нічна поїздка за місто', 'Вид на вогні міста й гарячий чай із термоса.']], en: [['Random Restaurant', 'Walk one direction and enter the first cozy spot.'], ['Night Scenic Drive', 'City lights viewpoint with a thermos of tea.']] },
+      { ctx: 'out', uk: [['Зоряна ніч', 'Плед, термос і пошук трьох сузір’їв.'], ['Прогулянка з 10 питаннями', 'Таких, яких ви ще не ставили одне одному.']], en: [['Stargazing Night', 'Blanket, thermos, and finding 3 constellations.'], ['10-Question Walk', 'Ask things you have never asked each other.']] },
+      { ctx: 'out', uk: [['Вулиця першої зустрічі', 'Пройдіться маршрутом, з якого все почалось.'], ['Маленька подорож', 'Містечко за годину їзди й зворотний квиток увечері.']], en: [['First-Meeting Street', 'Walk the route where it all started.'], ['Micro Day-Trip', 'A nearby town an hour away, back by evening.']] }
+    ],
+    date: [
+      { ctx: 'out', uk: [['Прогулянка парком із кавою', 'Легко йти, легко говорити, легко завершити.'], ['Вуличний фуд або ринок', 'Спробуйте різне й обговоріть, що найсмачніше.']], en: [['Park Coffee Walk', 'Easy pace, easy talk, zero pressure.'], ['Street Food Market', 'Sample small bites and rate the best one.']] },
+      { ctx: 'out', uk: [['Виставка чи галерея', 'Кожен обирає одну роботу й пояснює вибір.'], ['Книгарня-кав’ярня', 'Покажіть одне одному книжку, яка вас вразила.']], en: [['Art Gallery', 'Each pick one piece and explain why.'], ['Bookstore Café', 'Show each other a book that changed you.']] },
+      { ctx: 'out', uk: [['Боулінг або більярд', 'Легка змагальність швидко знімає напругу.'], ['Кавова експедиція', 'Три кав’ярні поруч, пошук найкращого еспресо.']], en: [['Bowling or Pool', 'Light competition breaks the ice fast.'], ['Espresso Crawl', 'Three nearby cafés, one winning cup.']] },
+      { ctx: 'out', uk: [['Набережна до заходу сонця', 'Морозиво й історії про улюблені подорожі.'], ['Майстер-клас на годину', 'Кераміка чи малювання, щоб було чим зайняти руки.']], en: [['Sunset Waterfront', 'Ice cream and favorite travel stories.'], ['1-Hour Workshop', 'Pottery or painting to keep hands busy.']] },
+      { ctx: 'home', uk: [['Спільне готування', 'Проста паста, ролі розподіляє монетка.'], ['Настолка для двох', 'Коротка гра, яка допомагає розговоритись.']], en: [['Cook Together', 'Simple pasta; the coin assigns chef and sous-chef.'], ['Two-Player Board Game', 'A quick game that sparks conversation.']] },
+      { ctx: 'home', uk: [['Дві правди й одна брехня', 'Простий спосіб дізнатися одне одного за чаєм.'], ['Кіно і чай після', 'Короткий фільм і 15 хвилин обговорення.']], en: [['Two Truths & a Lie', 'Simple way to learn about each other over tea.'], ['Movie & Tea Debrief', 'A film followed by a 15-minute review.']] }
+    ],
+    family: [
+      { ctx: 'home', uk: [['Фортеця з подушок', 'Ворота, прапор і секретний пароль для входу.'], ['Печиво разом', 'Кожен прикрашає своє, найкраще обирає суддя.']], en: [['Pillow Fortress', 'Gates, a flag, and a secret entry password.'], ['Cookie Decorating', 'Everyone decorates their own; vote on the wildest.']] },
+      { ctx: 'home', uk: [['Домашній кінозал', 'Попкорн, ковдри й голосування за мультфільм.'], ['Спільний конструктор', 'Будівельні блоки чи картон — збудуйте щось корисне.']], en: [['Living Room Cinema', 'Popcorn, blankets, and a family movie vote.'], ['Building Challenge', 'Use blocks or cardboard to build something useful.']] },
+      { ctx: 'home', uk: [['Кухня-лабораторія', 'Безпечні досліди з содою й кольоровою водою.'], ['Домашній театр', 'Три ролі, одна вигадана історія, оплески.']], en: [['Kitchen Science Lab', 'Safe baking-soda volcano or color-water experiments.'], ['Home Theater', 'Three roles, one improvised story, big applause.']] },
+      { ctx: 'out', uk: [['Квест із мапою', 'Намалюйте мапу парку й сховайте маленький «скарб».'], ['Прогулянка до тварин', 'Парк із білками, ферма або зоопарк.']], en: [['Treasure Map Quest', 'Draw a park map and hide a small treat.'], ['Animal Walk', 'Visit a park with squirrels, farm, or zoo.']] },
+      { ctx: 'out', uk: [['Фотоквест на прогулянці', 'Знайдіть 5 речей: червоне, кругле, старе, смішне, гладке.'], ['Велопрогулянка з пікніком', 'Маршрут обирає наймолодший учасник.']], en: [['Walk Photo Hunt', 'Find 5 things: red, round, old, funny, smooth.'], ['Bike & Picnic', 'The youngest family member picks the route.']] },
+      { ctx: 'out', uk: [['Паперові літаки', 'Змагання у дворі на дальність і найсмішніший політ.'], ['Школа природи', 'Зберіть листя й камінці та вигадайте їм назви.']], en: [['Paper Airplanes', 'Yard contest for longest and funniest flight.'], ['Nature Collectors', 'Gather leaves and pebbles and invent names for them.']] }
+    ]
+  };
+
+  const TWINS = {
+    uk: [
+      t => `У сусідній гілці твій двійник обрав «${t}». Він не знає про тебе, але теж сумнівався.`,
+      t => `Тим часом десь поруч двійник уже зайнятий: «${t}». Відчуває легке дежавю.`,
+      t => `В іншому всесвіті монетка впала навпаки, і там зараз відбувається «${t}».`
+    ],
+    en: [
+      t => `In the neighboring branch, your twin got "${t}". They don't know about you, but they hesitated too.`,
+      t => `Meanwhile nearby, your double is already doing "${t}" with a strange sense of déjà vu.`,
+      t => `In another universe the coin landed opposite, and "${t}" is happening right now.`
+    ]
+  };
+
+  const ESCAPES = {
+    uk: ['Мені дуже подобається, але завтра рано вставати.', 'Дякую за вечір, мені вже час додому, спишемось!', 'Було приємно, давай повторимо, коли буде більше часу.'],
+    en: ['I had a great time, but I have an early morning tomorrow.', 'Thanks for tonight, I should head home — let’s text!', 'Really enjoyed this, let’s do it again when we have more time.']
+  };
+
+  const LORE = [
+    { uk: { k: '1 з 7', h: 'Одна монетка', p: 'Ти підкидаєш монетку, і світ ніби обирає одну грань. У квантовій фізиці це питання стоїть набагато гостріше.' }, en: { k: '1 of 7', h: 'One Coin', p: 'You flip a coin and reality seems to pick one side. In quantum mechanics, this question cuts much deeper.' } },
+    { uk: { k: '2 з 7', h: 'Суперпозиція', p: 'Поки частинку не виміряли, математика описує її як суму кількох станів одразу. Це називають суперпозицією.' }, en: { k: '2 of 7', h: 'Superposition', p: 'Before measurement, quantum math describes a particle as a combination of multiple states at once.' } },
+    { uk: { k: '3 з 7', h: 'Проблема вимірювання', p: 'Коли ми дивимось на результат, бачимо лише один варіант. Класична версія додає правило «колапсу» хвильової функції.' }, en: { k: '3 of 7', h: 'Measurement Problem', p: 'When we look, we only ever see one outcome. Traditional physics adds a sudden "collapse" rule.' } },
+    { uk: { k: '4 з 7', h: 'Ідея Еверетта (1957)', p: 'Г’ю Еверетт III запропонував прибрати колапс. Після вимірювання світ розгалужується, і кожен результат існує у своїй гілці разом із тобою.' }, en: { k: '4 of 7', h: "Everett's Idea (1957)", p: 'Hugh Everett III removed collapse altogether. Reality branches, and every outcome happens in its own branch.' } },
+    { uk: { k: '5 з 7', h: 'Декогеренція', p: 'Чому ми не бачимо сусідні гілки? Через взаємодію зі світлом і повітрям вони перестають впливати одна на одну.' }, en: { k: '5 of 7', h: 'Decoherence', p: 'Why can’t we see other branches? Interaction with light and air makes branches stop interfering with each other.' } },
+    { uk: { k: '6 з 7', h: 'Психологія кидка', p: 'Монетка в апці — чесна гра, а не квантовий колайдер. Але вона миттєво виявляє твоє справжнє бажання: якщо ти розчарувався — ти вже знаєш відповідь.' }, en: { k: '6 of 7', h: 'Psychology of the Flip', p: 'This coin is a playful metaphor, not a collider. Yet it reveals what you truly want: if you feel disappointed, you already know your answer.' } },
+    { uk: { k: '7 з 7', h: 'Читати далі', list: ['Hugh Everett III, "Relative State Formulation", 1957', 'Sean Carroll, "Something Deeply Hidden", 2019', 'David Deutsch, "The Fabric of Reality", 1997', '<a href="https://plato.stanford.edu/entries/qm-manyworlds/" target="_blank" rel="noopener">Stanford Encyclopedia: Many-Worlds</a>'] }, en: { k: '7 of 7', h: 'Further Reading', list: ['Hugh Everett III, "Relative State Formulation", 1957', 'Sean Carroll, "Something Deeply Hidden", 2019', 'David Deutsch, "The Fabric of Reality", 1997', '<a href="https://plato.stanford.edu/entries/qm-manyworlds/" target="_blank" rel="noopener">Stanford Encyclopedia: Many-Worlds</a>'] } }
+  ];
+
+  const SKINS = [
+    { id: 'gold', uk: 'Золото', en: 'Gold', price: 0, hi: '#ffe7a3', mid: '#f3bb4d', lo: '#a8701f', rim: '#c78c28', ink1: '#4a2e05', ink2: '#094a45', metal: 0.85, rough: 0.24 },
+    { id: 'silver', uk: 'Місяць', en: 'Moon Silver', price: 50, hi: '#ffffff', mid: '#c4cce6', lo: '#6d7599', rim: '#9ba3c4', ink1: '#1e243d', ink2: '#1e243d', metal: 0.9, rough: 0.2 },
+    { id: 'copper', uk: 'Мідь', en: 'Copper', price: 80, hi: '#ffd4b5', mid: '#d98250', lo: '#8a401f', rim: '#b86235', ink1: '#3b1808', ink2: '#3b1808', metal: 0.88, rough: 0.26 },
+    { id: 'quantum', uk: 'Квант', en: 'Quantum Teal', price: 120, hi: '#c7fff7', mid: '#4fd6c8', lo: '#1f649e', rim: '#38a8b8', ink1: '#072447', ink2: '#2e1259', metal: 0.82, rough: 0.22 },
+    { id: 'neon', uk: 'Неон', en: 'Neon', price: 160, hi: '#ffd4f7', mid: '#ff5fd2', lo: '#6a1fb8', rim: '#c93eb8', ink1: '#26084a', ink2: '#073636', metal: 0.78, rough: 0.22 }
+  ];
+
+  const ACH = [
+    { id: 'first', uk: 'Перший кидок', en: 'First Flip', dUk: 'Підкинь 3D-монетку вперше.', dEn: 'Flip the 3D coin once.', c: 20, t: s => s.flips >= 1 },
+    { id: 'f10', uk: 'Дослідник', en: 'Explorer', dUk: '10 оплачуваних кидків.', dEn: '10 rewarded flips.', c: 40, m: 10, p: s => s.flips, t: s => s.flips >= 10 },
+    { id: 'contr', uk: 'Контраріан', en: 'Contrarian', dUk: '3 рази обери «Хотів іншого».', dEn: 'Pick "Wanted the other" 3 times.', c: 35, m: 3, p: s => s.st.other, t: s => s.st.other >= 3 },
+    { id: 'share', uk: 'Мультивсесвіт', en: 'Multiverse', dUk: 'Створи картку для Stories.', dEn: 'Generate a Stories card.', c: 25, t: s => s.st.share >= 1 },
+    { id: 'read', uk: 'Спостерігач', en: 'Observer', dUk: 'Прочитай усі картки лору.', dEn: 'Read all Lore cards.', c: 40, m: LORE.length, p: s => s.st.lore.length, t: s => s.st.lore.length >= LORE.length },
+    { id: 'edge', uk: 'Ребро', en: 'On the Edge', dUk: 'Монетка стала на ребро.', dEn: 'Land the coin on its edge.', c: 200, hid: true, t: s => s.st.edge >= 1 }
+  ];
+
+  /* ---------- STATE ---------- */
+  const KEY = 'everett-tma-v1';
+  const DAILY_CAP = 10;
+
+  function detectLang() {
+    const tgLang = tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code;
+    const raw = (tgLang || navigator.language || 'en').toLowerCase();
+    return (raw.startsWith('uk') || raw.startsWith('ru')) ? 'uk' : 'en';
+  }
+
+  function fresh() {
+    return {
+      lang: detectLang(),
+      coins: 30,
+      flips: 0,
+      streak: 0,
+      lastDay: '',
+      dailyDay: '',
+      mode: 'group',
+      filter: 'all',
+      rew: { day: '', used: 0 },
+      mine: [],
+      ach: {},
+      st: { other: 0, glad: 0, share: 0, edge: 0, lore: [] },
+      skin: 'gold',
+      own: ['gold'],
+      mute: false,
+      edgeTest: false
+    };
+  }
+
+  function load() {
+    try {
+      const r = localStorage.getItem(KEY);
+      if (r) {
+        const o = JSON.parse(r), f = fresh();
+        return { ...f, ...o, st: { ...f.st, ...(o.st || {}) }, rew: { ...f.rew, ...(o.rew || {}) } };
+      }
+    } catch (e) {}
+    return fresh();
+  }
+  let S = load();
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  const T = () => I18N[S.lang];
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const yest = () => { const d = new Date(Date.now() - 86400000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const rnd = () => { try { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] / 4294967296; } catch (e) { return Math.random(); } };
+  function rewState() { if (S.rew.day !== today()) S.rew = { day: today(), used: 0 }; return S.rew; }
+
+  /* ---------- WEB AUDIO API ---------- */
+  let AC = null;
+  function ac() {
+    if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (AC && AC.state === 'suspended') { try { AC.resume(); } catch (e) {} }
+    return AC;
+  }
+  function tone(f, d, type = 'sine', v = 0.08, delay = 0, to = null) {
+    const A = ac(); if (!A || S.mute) return;
+    const o = A.createOscillator(), g = A.createGain(), t0 = A.currentTime + delay;
+    o.type = type; o.frequency.setValueAtTime(f, t0);
+    if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + d);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(v, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(g); g.connect(A.destination); o.start(t0); o.stop(t0 + d + 0.04);
+  }
+  function sfx(k) {
+    const pitch = 0.95 + rnd() * 0.1; // ±5% subtle pitch variation
+    if (k === 'flip') {
+      tone(280 * pitch, 0.32, 'triangle', 0.07, 0, 860 * pitch);
+    } else if (k === 'land') {
+      tone(587 * pitch, 0.24, 'sine', 0.09, 0);
+      tone(880 * pitch, 0.34, 'sine', 0.08, 0.07);
+    } else if (k === 'edge') {
+      [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.5, 'sine', 0.08, i * 0.09));
+    }
+  }
+
+  /* ---------- REAL 3D COIN WITH THREE.JS ---------- */
+  let scene, camera, renderer, coinGroup, coinMesh, keyLight, rimLight;
+  let threeReady = false;
+  let animState = {
+    flipping: false,
+    startTime: 0,
+    duration: 1450,
+    startX: 0,
+    targetX: 0,
+    wobbleDir: 1,
+    isEdge: false,
+    onDone: null
+  };
+
+  function makeFaceTexture(skin, isSide1) {
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 512;
+    const ctx = c.getContext('2d');
+    const cx = 256, cy = 256;
+
+    // Metallic radial gradient
+    const grd = ctx.createRadialGradient(180, 160, 20, cx, cy, 256);
+    grd.addColorStop(0, skin.hi);
+    grd.addColorStop(0.55, skin.mid);
+    grd.addColorStop(1, skin.lo);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Outer raised rim rings
+    ctx.strokeStyle = skin.rim;
+    ctx.lineWidth = 22;
+    ctx.beginPath(); ctx.arc(cx, cy, 240, 0, Math.PI * 2); ctx.stroke();
+
+    ctx.strokeStyle = skin.ink1;
+    ctx.globalAlpha = 0.25;
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(cx, cy, 212, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Branching Y-symbol
+    const col = isSide1 ? skin.ink1 : skin.ink2;
+    ctx.strokeStyle = col;
+    ctx.fillStyle = col;
+    ctx.lineWidth = 22;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    if (isSide1) {
+      ctx.moveTo(cx, 355); ctx.lineTo(cx, 245);
+      ctx.lineTo(165, 145);
+      ctx.moveTo(cx, 245); ctx.lineTo(347, 145);
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(165, 125, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(347, 125, 16, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.moveTo(cx, 125); ctx.lineTo(cx, 235);
+      ctx.lineTo(165, 335);
+      ctx.moveTo(cx, 235); ctx.lineTo(347, 335);
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(165, 355, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(347, 355, 16, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Roman numeral
+    ctx.font = '700 64px Unbounded, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isSide1 ? 'I' : 'II', cx, isSide1 ? 415 : 415);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.anisotropy = 4;
+    return tex;
+  }
+
+  function makeRimTexture(skin) {
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 64;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = skin.rim;
+    ctx.fillRect(0, 0, 512, 64);
+    // Ribbed knurling stripes
+    for (let x = 0; x < 512; x += 8) {
+      ctx.fillStyle = x % 16 === 0 ? skin.hi : skin.lo;
+      ctx.globalAlpha = 0.55;
+      ctx.fillRect(x, 0, 4, 64);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.repeat.set(6, 1);
+    return tex;
+  }
+
+  function init3D() {
+    if (typeof THREE === 'undefined') return;
+    const canvas = $('#coin3d');
+    const stage = $('#stage');
+    const w = stage.clientWidth || 340;
+    const h = stage.clientHeight || 250;
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(36, w / h, 0.1, 100);
+    camera.position.set(0, 0, 7.2);
+
+    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h, false);
+
+    // 3-Point Lighting
+    const ambient = new THREE.AmbientLight(0xffffff, 0.75);
+    scene.add(ambient);
+
+    keyLight = new THREE.DirectionalLight(0xffe6a8, 1.55);
+    keyLight.position.set(4, 6, 7);
+    scene.add(keyLight);
+
+    rimLight = new THREE.DirectionalLight(0x4fd6c8, 1.25);
+    rimLight.position.set(-5, -3, 4);
+    scene.add(rimLight);
+
+    const backLight = new THREE.PointLight(0xffffff, 0.6);
+    backLight.position.set(0, 4, -5);
+    scene.add(backLight);
+
+    // Thick 3D Cylinder Coin
+    coinGroup = new THREE.Group();
+    const geom = new THREE.CylinderGeometry(1.55, 1.55, 0.28, 64);
+    const mats = buildCoinMaterials();
+    coinMesh = new THREE.Mesh(geom, mats);
+    // Rotate cylinder so top cap (+Y) faces +Z (camera) and bottom cap (-Y) faces -Z
+    coinMesh.rotation.x = Math.PI / 2;
+    coinGroup.add(coinMesh);
+    scene.add(coinGroup);
+
+    threeReady = true;
+
+    window.addEventListener('resize', () => {
+      const nw = stage.clientWidth || 340;
+      const nh = stage.clientHeight || 250;
+      camera.aspect = nw / nh;
+      camera.updateProjectionMatrix();
+      renderer.setSize(nw, nh, false);
+    });
+
+    function renderLoop(now) {
+      requestAnimationFrame(renderLoop);
+      if (animState.flipping) {
+        const t = Math.min(1, (now - animState.startTime) / animState.duration);
+        // Smooth ease-out cubic for spin
+        const ease = 1 - Math.pow(1 - t, 3);
+        coinGroup.rotation.x = animState.startX + (animState.targetX - animState.startX) * ease;
+        // Parabolic jump arc + slight scale toward camera
+        const arc = Math.sin(t * Math.PI);
+        coinGroup.position.y = arc * 1.15;
+        coinGroup.position.z = arc * 1.1;
+        coinGroup.rotation.z = Math.sin(t * Math.PI * 2) * 0.22 * animState.wobbleDir * (1 - t);
+        coinGroup.rotation.y = Math.sin(t * Math.PI) * 0.25 * animState.wobbleDir;
+
+        if (t >= 1) {
+          animState.flipping = false;
+          coinGroup.position.set(0, 0, 0);
+          coinGroup.rotation.z = 0;
+          coinGroup.rotation.y = 0;
+          coinGroup.rotation.x = animState.targetX % (Math.PI * 2);
+          if (animState.onDone) animState.onDone();
+        }
+      } else {
+        // Gentle idle floating & tilt so metallic sheen gleams
+        const s = now * 0.0014;
+        coinGroup.position.y = Math.sin(s) * 0.08;
+        coinGroup.rotation.y = Math.sin(s * 0.8) * (animState.isEdge ? 0.22 : 0.14);
+        coinGroup.rotation.z = Math.cos(s * 0.6) * 0.04;
+      }
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(renderLoop);
+  }
+
+  function buildCoinMaterials() {
+    const sk = SKINS.find(x => x.id === S.skin) || SKINS[0];
+    const rimTex = makeRimTexture(sk);
+    const f1Tex = makeFaceTexture(sk, true);
+    const f2Tex = makeFaceTexture(sk, false);
+    return [
+      new THREE.MeshStandardMaterial({ map: rimTex, bumpMap: rimTex, bumpScale: 0.03, metalness: sk.metal, roughness: sk.rough }),
+      new THREE.MeshStandardMaterial({ map: f1Tex, metalness: sk.metal, roughness: sk.rough }),
+      new THREE.MeshStandardMaterial({ map: f2Tex, metalness: sk.metal, roughness: sk.rough })
+    ];
+  }
+
+  function applySkin3D() {
+    if (!threeReady || !coinMesh) return;
+    const oldMats = coinMesh.material;
+    coinMesh.material = buildCoinMaterials();
+    if (Array.isArray(oldMats)) oldMats.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+  }
+
+  /* ---------- PAIRS & FILTERS ---------- */
+  let cur = { pairObj: null, pair: null, flipped: false, result: null, counted: false, react: false };
+  let bags = {};
+
+  function getFilteredPool(mode) {
+    const list = IDEAS[mode] || [];
+    if (S.filter === 'all') return list;
+    const f = list.filter(item => item.ctx === S.filter);
+    return f.length ? f : list;
+  }
+
+  function drawPair(mode) {
+    const pool = getFilteredPool(mode);
+    const key = mode + ':' + S.filter;
+    if (!bags[key] || !bags[key].length) {
+      bags[key] = pool.map((_, i) => i);
+      for (let i = bags[key].length - 1; i > 0; i--) {
+        const j = Math.floor(rnd() * (i + 1));
+        [bags[key][i], bags[key][j]] = [bags[key][j], bags[key][i]];
+      }
+    }
+    const obj = pool[bags[key].pop()];
+    const swap = rnd() < 0.5;
+    return { obj, swap };
+  }
+
+  function dailyPairObj() {
+    const all = BASE_MODES.flatMap(m => IDEAS[m]);
+    let h = 0; const s = today();
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return { obj: all[h % all.length], swap: false };
+  }
+
+  function extractPairText(pairObj) {
+    const arr = pairObj.obj[S.lang];
+    return pairObj.swap ? [arr[1], arr[0]] : [arr[0], arr[1]];
+  }
+
+  function newPair() {
+    if (S.mode === 'mine') { mineSync(); return; }
+    cur.pairObj = (S.mode === 'daily') ? dailyPairObj() : drawPair(S.mode);
+    cur.pair = extractPairText(cur.pairObj);
+    cur.flipped = false; cur.result = null; cur.counted = false; cur.react = false;
+    animState.isEdge = false;
+    renderPair();
+    resetResultUI();
+  }
+
+  function renderPair() {
+    for (let i = 0; i < 2; i++) {
+      $(`#t${i + 1}`).textContent = cur.pair[i][0];
+      const d = $(`#d${i + 1}`);
+      d.textContent = cur.pair[i][1] || '';
+      d.hidden = !cur.pair[i][1];
+    }
+  }
+
+  const clean = v => String(v || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const mineVals = () => [clean($('#m1').value), clean($('#m2').value)];
+  const mineOk = () => { const v = mineVals(); return v[0] && v[1] && v[0].toLowerCase() !== v[1].toLowerCase(); };
+  function mineSync() {
+    const v = mineVals();
+    cur.pairObj = null;
+    cur.pair = [[v[0] || T().side1, ''], [v[1] || T().side2, '']];
+    cur.flipped = false; cur.result = null; cur.counted = false; cur.react = false;
+    renderPair();
+    resetResultUI();
+  }
+
+  function renderMine() {
+    $('#mineList').innerHTML = S.mine.map((p, i) => `
+      <div class="saved">
+        <span>${p[0]} / ${p[1]}</span>
+        <button data-act="mtake" data-id="${i}">↑</button>
+        <button data-act="mdel" data-id="${i}">×</button>
+      </div>`).join('');
+  }
+
+  function resetResultUI() {
+    $('#i1').className = 'idea'; $('#i2').className = 'idea';
+    $('#verdict').innerHTML = T().tapCoin;
+    $('#after').hidden = true;
+    $('#stage').classList.remove('edge-glow');
+    ['#reactMsg', '#twinMsg', '#escMsg'].forEach(s => { $(s).hidden = true; $(s).textContent = ''; });
+    $('#gladBtn').disabled = false; $('#otherBtn').disabled = false; $('#branchBtn').disabled = false;
+    $('#bothBtn').disabled = false;
+    const dis = animState.flipping || (S.mode === 'mine' && !mineOk());
+    $('#flipBtn').textContent = (S.mode === 'mine' && !mineOk()) ? T().enterTwo : T().flipBtn;
+    $('#flipBtn').disabled = dis;
+  }
+
+  /* ---------- FLIP LOGIC ---------- */
+  function flip() {
+    if (animState.flipping) return;
+    if (S.mode === 'mine' && !mineOk()) { toast(T().enterTwo, false); return; }
+    ac();
+    haptic('impact', 'medium');
+    sfx('flip');
+    resetResultUI();
+    $('#flipBtn').disabled = true;
+
+    const edge = rnd() < (S.edgeTest ? 0.1 : 0.001);
+    const face = edge ? -1 : (rnd() < 0.5 ? 0 : 1);
+
+    if (threeReady && coinGroup) {
+      const startX = coinGroup.rotation.x;
+      const targetAngle = edge ? (Math.PI / 2) : (face === 0 ? 0 : Math.PI);
+      const spins = 5 + Math.floor(rnd() * 3);
+      const normStart = ((startX % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      const delta = ((targetAngle - normStart) + Math.PI * 2) % (Math.PI * 2);
+
+      animState.flipping = true;
+      animState.startTime = performance.now();
+      animState.duration = edge ? 1850 : 1400;
+      animState.startX = startX;
+      animState.targetX = startX + spins * Math.PI * 2 + delta;
+      animState.wobbleDir = rnd() < 0.5 ? 1 : -1;
+      animState.isEdge = edge;
+      animState.onDone = () => land(face, edge);
+    } else {
+      setTimeout(() => land(face, edge), 600);
+    }
+  }
+
+  function land(face, edge) {
+    const r = rewState(), t = today();
+    const isCustom = S.mode === 'mine';
+    const canReward = !isCustom && !cur.counted && r.used < DAILY_CAP;
+    let subNote = '';
+
+    if (cur.counted && !isCustom) subNote = T().reFlipNote;
+    else if (!isCustom && r.used >= DAILY_CAP) subNote = T().capNote;
+
+    if (canReward) {
+      cur.counted = true;
+      r.used++;
+      S.flips++;
+      S.coins += 5;
+      if (S.lastDay !== t) {
+        S.streak = (S.lastDay === yest()) ? S.streak + 1 : 1;
+        S.lastDay = t; S.coins += 10;
+        toast(`+10 ${T().coins} · ${S.streak} ${T().days}`, true);
+      }
+      if (S.mode === 'daily' && S.dailyDay !== t) {
+        S.dailyDay = t; S.coins += 20;
+        toast(`Daily: +20 ${T().coins}`, true);
+      }
+      if (edge) { S.st.edge++; S.coins += 100; }
+    }
+
+    cur.flipped = true; cur.result = edge ? 'edge' : face; cur.react = false;
+    const v = $('#verdict');
+
+    if (edge) {
+      $('#i1').className = 'idea win'; $('#i2').className = 'idea win';
+      $('#stage').classList.add('edge-glow');
+      v.innerHTML = `${T().edgeTitle}<small>${T().edgeSub}${canReward ? ' +100' : ''}</small>`;
+      $('#branchBtn').disabled = true; $('#otherBtn').disabled = true;
+      haptic('notif', 'success');
+      sfx('edge');
+    } else {
+      $(face === 0 ? '#i1' : '#i2').className = 'idea win';
+      $(face === 0 ? '#i2' : '#i1').className = 'idea lose';
+      v.innerHTML = `${T().chose} «${cur.pair[face][0]}»<small>${T().sideLabel} ${face === 0 ? 'I' : 'II'}${subNote ? ' · ' + subNote : ''}</small>`;
+      haptic('impact', 'heavy');
+      sfx('land');
+    }
+
+    if (S.mode === 'date' && !edge) {
+      const escList = ESCAPES[S.lang];
+      $('#escMsg').textContent = `${T().escPrefix} «${escList[Math.floor(rnd() * escList.length)]}»`;
+      $('#escMsg').hidden = false;
+    }
+
+    $('#after').hidden = false;
+    $('#flipBtn').textContent = T().flipAgain;
+    $('#flipBtn').disabled = false;
+    checkAch(); save(); renderStats();
+  }
+
+  /* ---------- STORIES CANVAS (1080x1920) ---------- */
+  function drawStoryCard() {
+    const c = $('#storyCanvas'), ctx = c.getContext('2d');
+    const W = 1080, H = 1920;
+    const isEdge = cur.result === 'edge';
+    const winTxt = isEdge ? `${cur.pair[0][0]} + ${cur.pair[1][0]}` : cur.pair[cur.result][0];
+    const loseTxt = isEdge ? T().storyEdge : cur.pair[cur.result === 0 ? 1 : 0][0];
+
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#1a2152'); bg.addColorStop(0.5, '#0d1022'); bg.addColorStop(1, '#071d24');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+    // Branch lines
+    ctx.strokeStyle = 'rgba(243, 187, 77, 0.2)'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(W / 2, 1620); ctx.lineTo(W / 2, 1060); ctx.lineTo(220, 480); ctx.stroke();
+    ctx.strokeStyle = 'rgba(79, 214, 200, 0.2)';
+    ctx.beginPath(); ctx.moveTo(W / 2, 1060); ctx.lineTo(860, 480); ctx.stroke();
+
+    ctx.fillStyle = '#f3bb4d'; ctx.font = '700 44px Unbounded, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(T().brand.toUpperCase(), W / 2, 190);
+
+    function wrap(text, x, y, maxW, lh) {
+      const words = text.split(' '); let line = '', lines = [];
+      words.forEach(w => {
+        const test = line ? line + ' ' + w : w;
+        if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+        else line = test;
+      });
+      if (line) lines.push(line);
+      lines.forEach((l, i) => ctx.fillText(l, x, y + i * lh));
+    }
+
+    // Winner box
+    ctx.fillStyle = 'rgba(243, 187, 77, 0.12)'; ctx.strokeStyle = '#f3bb4d'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.roundRect(96, 400, W - 192, 460, 40); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f3bb4d'; ctx.font = '700 28px Unbounded, sans-serif';
+    ctx.fillText(T().storyHead, W / 2, 500);
+    ctx.fillStyle = '#ecebf8'; ctx.font = '700 56px Unbounded, sans-serif';
+    wrap(winTxt, W / 2, 620, W - 260, 72);
+
+    ctx.fillStyle = '#a0a3c8'; ctx.font = '700 34px Unbounded, sans-serif';
+    ctx.fillText('VS', W / 2, 955);
+
+    // Other branch box
+    ctx.fillStyle = 'rgba(79, 214, 200, 0.1)'; ctx.strokeStyle = '#4fd6c8'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.roundRect(96, 1030, W - 192, 420, 40); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#4fd6c8'; ctx.font = '700 26px Unbounded, sans-serif';
+    ctx.fillText(T().storyOther, W / 2, 1125);
+    ctx.fillStyle = '#d3d7f0'; ctx.font = '700 46px Manrope, sans-serif';
+    wrap(loseTxt, W / 2, 1240, W - 260, 62);
+
+    ctx.fillStyle = '#a0a3c8'; ctx.font = '600 30px Manrope, sans-serif';
+    ctx.fillText("Everett's Coin · Telegram Mini App", W / 2, 1780);
+  }
+
+  /* ---------- RENDER UI ---------- */
+  function applyI18n() {
+    document.documentElement.lang = S.lang;
+    $('#brandTitle').textContent = T().brand;
+    $('#langBtn').textContent = S.lang === 'uk' ? 'UA / EN' : 'EN / UA';
+    $('#m1').placeholder = T().ph1;
+    $('#m2').placeholder = T().ph2;
+    $$('[data-i18n]').forEach(el => {
+      const k = el.dataset.i18n;
+      if (T()[k]) el.textContent = T()[k];
+    });
+    if (cur.pairObj) {
+      cur.pair = extractPairText(cur.pairObj);
+      renderPair();
+    } else if (S.mode === 'mine') {
+      mineSync();
+    }
+    if (!cur.flipped) resetResultUI();
+  }
+
+  function renderStats() {
+    const r = rewState();
+    const rem = Math.max(0, DAILY_CAP - r.used);
+    $('#sCoins').textContent = S.coins;
+    $('#sStreak').textContent = S.streak;
+    $('#sWorlds').textContent = S.flips;
+    $('#sRew').textContent = `${rem}/${DAILY_CAP}`;
+    $('#pRew').className = 'pill' + (rem === 0 ? ' low' : '');
+    $('#sndBtn').textContent = S.mute ? '🔇' : '🔊';
+  }
+
+  function renderModes() {
+    $('#modes').innerHTML = MODES.map(m =>
+      `<button class="chip" data-act="mode" data-id="${m.id}" aria-pressed="${S.mode === m.id}">${m[S.lang]}</button>`
+    ).join('');
+    const active = MODES.find(m => m.id === S.mode);
+    $('#modeSub').textContent = S.lang === 'uk' ? active.subUk : active.subEn;
+
+    const isBase = BASE_MODES.includes(S.mode);
+    $('#filters').hidden = !isBase;
+    if (isBase) {
+      const flts = [{ id: 'all', l: T().fAll }, { id: 'home', l: T().fHome }, { id: 'out', l: T().fOut }];
+      $('#filters').innerHTML = flts.map(f =>
+        `<button class="fchip" data-act="filter" data-id="${f.id}" aria-pressed="${S.filter === f.id}">${f.l}</button>`
+      ).join('');
+    }
+    $('#minePanel').hidden = S.mode !== 'mine';
+    $('#pairActions').hidden = S.mode === 'mine';
+    $('#newBtn').disabled = S.mode === 'daily';
+  }
+
+  function checkAch() {
+    let any = false;
+    ACH.forEach(a => {
+      if (S.ach[a.id]) return;
+      if (a.t(S)) {
+        S.ach[a.id] = Date.now();
+        S.coins += a.c;
+        toast(`${a[S.lang]} +${a.c}`, true);
+        any = true;
+      }
+    });
+    if (any) { renderAch(); renderStats(); save(); }
+  }
+
+  function renderAch() {
+    let n = 0;
+    $('#achList').innerHTML = ACH.map(a => {
+      const on = !!S.ach[a.id]; if (on) n++;
+      const hide = a.hid && !on;
+      const pr = !on && a.m ? `<div class="bar"><i style="width:${Math.round(Math.min(a.p(S), a.m) / a.m * 100)}%"></i></div>` : '';
+      return `<div class="ach${on ? ' on' : ''}">
+        <div class="ic">${on ? '✓' : '🔒'}</div>
+        <div><h3>${hide ? T().hiddenAch : a[S.lang]}</h3><p>${hide ? T().hiddenDesc : (S.lang === 'uk' ? a.dUk : a.dEn)}</p>${pr}</div>
+        <div class="rw">+${a.c}</div>
+      </div>`;
+    }).join('');
+    $('#achCount').textContent = `${n} / ${ACH.length}`;
+  }
+
+  function renderLore() {
+    $('#loreSub').textContent = T().loreSub;
+    $('#carousel').innerHTML = LORE.map(item => {
+      const c = item[S.lang];
+      return `<article class="lcard">
+        <div class="k">${c.k}</div>
+        <h2>${c.h}</h2>
+        ${c.p ? `<p>${c.p}</p>` : `<ul>${c.list.map(x => `<li>${x}</li>`).join('')}</ul>`}
+      </article>`;
+    }).join('');
+    $('#dots').innerHTML = LORE.map(() => '<i></i>').join('');
+    onLore();
+  }
+
+  function loreIdx() { const c = $('#carousel'); return Math.max(0, Math.min(LORE.length - 1, Math.round(c.scrollLeft / ((c.clientWidth || 300) + 12)))); }
+  function onLore() {
+    const i = loreIdx();
+    $$('#dots i').forEach((d, k) => d.className = k === i ? 'on' : '');
+    $('#lnext').textContent = i === LORE.length - 1 ? T().restart : T().next;
+    if (!S.st.lore.includes(i)) { S.st.lore.push(i); checkAch(); save(); }
+  }
+
+  function renderShop() {
+    $('#skinCount').textContent = `${S.own.length} / ${SKINS.length}`;
+    $('#skins').innerHTML = SKINS.map(s => {
+      const own = S.own.includes(s.id);
+      const btn = own
+        ? (s.id === S.skin ? `<button class="btn on" disabled>${T().equipped}</button>` : `<button class="btn ghost" data-act="equip-skin" data-id="${s.id}">${T().equip}</button>`)
+        : `<button class="btn buy" data-act="buy-skin" data-id="${s.id}">${s.price} ${T().coins}</button>`;
+      return `<div class="item">
+        <div class="mini" style="--hi:${s.hi};--mid:${s.mid};--lo:${s.lo};--rim:${s.rim}"></div>
+        <h3>${s[S.lang]}</h3>
+        ${btn}
+      </div>`;
+    }).join('');
+    $('#edgeBtn').textContent = S.edgeTest ? T().on : T().off;
+    $('#edgeBtn').setAttribute('aria-pressed', S.edgeTest ? 'true' : 'false');
+  }
+
+  function setTab(t) {
+    ['flip', 'ach', 'lore', 'shop'].forEach(k => $(`#tab-${k}`).hidden = k !== t);
+    $$('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'));
+    if (t === 'lore') setTimeout(onLore, 40);
+    if (t === 'ach') renderAch();
+    if (t === 'shop') renderShop();
+    window.scrollTo(0, 0);
+  }
+
+  function toast(msg, gold = true) {
+    const el = document.createElement('div');
+    el.className = 'toast' + (gold ? '' : ' s'); el.textContent = msg;
+    const box = $('#toasts'); box.appendChild(el);
+    while (box.children.length > 3) box.removeChild(box.firstChild);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  function copyText(txt) {
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast(T().copied, true); } catch (e) {}
+    ta.remove();
+  }
+
+  /* ---------- EVENTS ---------- */
+  let resetArmed = false;
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const a = b.dataset.act, id = b.dataset.id;
+
+    if (a !== 'flip') haptic('impact', 'light');
+
+    if (a === 'tab') setTab(b.dataset.tab);
+    else if (a === 'lang') {
+      S.lang = S.lang === 'uk' ? 'en' : 'uk';
+      save(); renderAll();
+    } else if (a === 'mute') {
+      S.mute = !S.mute; save(); renderStats();
+    } else if (a === 'mode') {
+      S.mode = id; save(); renderModes(); newPair();
+    } else if (a === 'filter') {
+      S.filter = id; save(); renderModes(); newPair();
+    } else if (a === 'flip') {
+      flip();
+    } else if (a === 'newpair') {
+      newPair();
+    } else if (a === 'both') {
+      $('#bothBtn').disabled = true; toast(T().bothToast, true);
+    } else if (a === 'glad') {
+      if (cur.react) return; cur.react = true; S.st.glad++;
+      $('#gladBtn').disabled = true; $('#otherBtn').disabled = true;
+      $('#reactMsg').textContent = cur.result === 'edge' ? T().gladEdge : T().gladMsg;
+      $('#reactMsg').hidden = false; save();
+    } else if (a === 'other') {
+      if (cur.react || cur.result === 'edge') return; cur.react = true; S.st.other++;
+      $('#gladBtn').disabled = true; $('#otherBtn').disabled = true;
+      const o = cur.result === 0 ? 1 : 0;
+      $(o === 0 ? '#i1' : '#i2').className = 'idea want';
+      $('#reactMsg').textContent = T().otherMsg(cur.pair[o][0]);
+      $('#reactMsg').hidden = false; checkAch(); save();
+    } else if (a === 'branch') {
+      if (cur.result === 'edge') return;
+      const o = cur.result === 0 ? 1 : 0;
+      const list = TWINS[S.lang];
+      $('#twinMsg').textContent = list[Math.floor(rnd() * list.length)](cur.pair[o][0]);
+      $('#twinMsg').hidden = false;
+    } else if (a === 'share-tg') {
+      const isEdge = cur.result === 'edge';
+      const w = isEdge ? `${cur.pair[0][0]} + ${cur.pair[1][0]}` : cur.pair[cur.result][0];
+      const l = isEdge ? T().storyEdge : cur.pair[cur.result === 0 ? 1 : 0][0];
+      const txt = encodeURIComponent(T().shareText(w, l));
+      const url = encodeURIComponent(window.location.href);
+      const link = `https://t.me/share/url?url=${url}&text=${txt}`;
+      if (tg && tg.openTelegramLink) tg.openTelegramLink(link);
+      else window.open(link, '_blank');
+    } else if (a === 'share-story') {
+      drawStoryCard();
+      $('#storyModal').hidden = false;
+      S.st.share++; checkAch(); save();
+    } else if (a === 'story-dl') {
+      const aEl = document.createElement('a');
+      aEl.download = 'everett-coin-story.png';
+      aEl.href = $('#storyCanvas').toDataURL('image/png');
+      aEl.click();
+      toast(T().savedPng, true);
+    } else if (a === 'story-copy') {
+      const isEdge = cur.result === 'edge';
+      const w = isEdge ? `${cur.pair[0][0]} + ${cur.pair[1][0]}` : cur.pair[cur.result][0];
+      const l = isEdge ? T().storyEdge : cur.pair[cur.result === 0 ? 1 : 0][0];
+      copyText(T().shareText(w, l));
+    } else if (a === 'close-modal') {
+      $('#storyModal').hidden = true;
+    } else if (a === 'msave') {
+      const v = mineVals();
+      if (!mineOk()) { toast(T().enterTwo, false); return; }
+      S.mine.push(v); save(); renderMine();
+    } else if (a === 'mclear') {
+      $('#m1').value = ''; $('#m2').value = ''; mineSync();
+    } else if (a === 'mtake') {
+      const q = S.mine[Number(id)]; if (q) { $('#m1').value = q[0]; $('#m2').value = q[1]; mineSync(); }
+    } else if (a === 'mdel') {
+      S.mine.splice(Number(id), 1); save(); renderMine();
+    } else if (a === 'lnext') {
+      const cc = $('#carousel');
+      if (loreIdx() === LORE.length - 1) cc.scrollTo({ left: 0, behavior: 'smooth' });
+      else cc.scrollBy({ left: cc.clientWidth + 12, behavior: 'smooth' });
+    } else if (a === 'equip-skin') {
+      S.skin = id; applySkin3D(); save(); renderShop();
+    } else if (a === 'buy-skin') {
+      const sk = SKINS.find(x => x.id === id);
+      if (S.coins < sk.price) { toast(T().needCoins(sk.price), false); return; }
+      S.coins -= sk.price; S.own.push(id); S.skin = id;
+      applySkin3D(); save(); renderStats(); renderShop();
+      haptic('notif', 'success');
+    } else if (a === 'edgetest') {
+      S.edgeTest = !S.edgeTest; save(); renderShop();
+    } else if (a === 'reset') {
+      if (!resetArmed) {
+        resetArmed = true; b.textContent = T().confirmReset;
+        setTimeout(() => { resetArmed = false; b.textContent = T().reset; }, 3000);
+      } else {
+        resetArmed = false; localStorage.removeItem(KEY); S = fresh();
+        applySkin3D(); renderAll(); newPair();
+      }
+    }
+  });
+
+  $('#m1').addEventListener('input', mineSync);
+  $('#m2').addEventListener('input', mineSync);
+  $('#carousel').addEventListener('scroll', () => { clearTimeout(onLore.t); onLore.t = setTimeout(onLore, 80); });
+
+  function renderAll() {
+    applyI18n();
+    renderStats();
+    renderModes();
+    renderAch();
+    renderLore();
+    renderShop();
+    renderMine();
+  }
+
+  window.addEventListener('load', () => {
+    init3D();
+    renderAll();
+    newPair();
+  });
+})();
+</script>
+</body>
+</html>
